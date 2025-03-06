@@ -1,31 +1,35 @@
 const express = require("express");
-const sheets = require("../config/googleSheetsConfig");
+const { getData, addData, generateAPI } = require("../services/sheetsService");
 const router = express.Router();
 
-const SPREADSHEET_ID = "your-google-sheet-id";
-
-// Fetch data
+// ✅ GET: Fetch all data
 router.get("/data", async (req, res) => {
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: "Sheet1",
-  });
-
-  res.json(response.data.values);
+  try {
+    const data = await getData();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Insert data
+// ✅ POST: Add new data
 router.post("/data", async (req, res) => {
-  const { values } = req.body;
+  try {
+    const response = await addData(req.body.values);
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: "Sheet1",
-    valueInputOption: "RAW",
-    requestBody: { values },
-  });
-
-  res.json({ message: "Data added" });
+// ✅ GET: Generate API Endpoints
+router.get("/generate-api", async (req, res) => {
+  try {
+    const apiEndpoints = await generateAPI();
+    res.json(apiEndpoints);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
