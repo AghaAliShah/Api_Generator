@@ -1,0 +1,14 @@
+{
+  "name": "mysql-api-generator",
+  "version": "1.0.0",
+  "description": "A project using MySQL with Node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mysql2": "3.14.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
