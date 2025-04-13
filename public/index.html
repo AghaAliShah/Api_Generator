@@ -1,0 +1,155 @@
+Api_Generator\public\index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Generator</h1>
+    
+    <form id="generator-form">
+        <div class="form-group">
+            <label for="projectName">Project Name:</label>
+            <input type="text" id="projectName" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="dbType">Database Type:</label>
+            <select id="dbType">
+                <option value="mysql">MySQL</option>
+                <option value="postgres">PostgreSQL</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="host">Host:</label>
+            <input type="text" id="host" value="localhost">
+        </div>
+        
+        <div class="form-group">
+            <label for="port">Port:</label>
+            <input type="number" id="port" value="3306">
+        </div>
+        
+        <div class="form-group">
+            <label for="database">Database Name:</label>
+            <input type="text" id="database" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password">
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="autoStart" checked>
+                Automatically install and start API after generation
+            </label>
+        </div>
+        
+        <button type="submit">Generate API</button>
+    </form>
+    
+    <div class="result" id="result">
+        <h3>API Generated Successfully!</h3>
+        <p>Your API has been generated at: <span id="output-path"></span></p>
+    </div>
+    
+    <script>
+        document.getElementById('dbType').addEventListener('change', function() {
+            const portField = document.getElementById('port');
+            portField.value = this.value === 'mysql' ? '3306' : '5432';
+        });
+        
+        document.getElementById('generator-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const config = {
+                projectName: document.getElementById('projectName').value,
+                host: document.getElementById('host').value,
+                port: document.getElementById('port').value,
+                database: document.getElementById('database').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+            
+            const type = document.getElementById('dbType').value;
+            const autoStart = document.getElementById('autoStart').checked;
+            
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, config, autoStart })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('output-path').textContent = data.outputPath;
+                    
+                    // Update the result area with API URL if running
+                    if (data.running && data.apiUrl) {
+                        document.getElementById('result').innerHTML += `
+                            <p>API is running at: <a href="${data.apiUrl}" target="_blank">${data.apiUrl}</a></p>
+                            <p>You can test the endpoints:</p>
+                            <ul>
+                                <li><a href="${data.apiUrl}/api/users" target="_blank">${data.apiUrl}/api/users</a> (GET all users)</li>
+                                <li>${data.apiUrl}/api/users/:id (GET a specific user)</li>
+                                <li>${data.apiUrl}/api/users (POST to create a new user)</li>
+                            </ul>
+                        `;
+                    }
+                    
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
