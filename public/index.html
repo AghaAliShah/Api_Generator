@@ -1,4 +1,3 @@
-Api_Generator\public\index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,53 +36,79 @@ Api_Generator\public\index.html -->
             border: 1px solid #ddd;
             display: none;
         }
+        .help-text {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
     <h1>API Generator</h1>
     
-    <form id="generator-form">
+    <form id="generator-form" enctype="multipart/form-data">
         <div class="form-group">
             <label for="projectName">Project Name:</label>
-            <input type="text" id="projectName" required>
+            <input type="text" id="projectName" name="projectName" required>
         </div>
         
         <div class="form-group">
             <label for="dbType">Database Type:</label>
-            <select id="dbType">
+            <select id="dbType" name="dbType">
                 <option value="mysql">MySQL</option>
                 <option value="postgres">PostgreSQL</option>
+                <option value="sqlite">SQLite</option>
             </select>
         </div>
         
-        <div class="form-group">
-            <label for="host">Host:</label>
-            <input type="text" id="host" value="localhost">
+        <!-- Database credentials section (MySQL/PostgreSQL) -->
+        <div id="credentials-section">
+            <div class="form-group">
+                <label for="host">Host:</label>
+                <input type="text" id="host" name="host" value="localhost">
+            </div>
+            
+            <div class="form-group">
+                <label for="port">Port:</label>
+                <input type="number" id="port" name="port" value="3306">
+            </div>
+            
+            <div class="form-group">
+                <label for="database">Database Name:</label>
+                <input type="text" id="database" name="database" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password">
+            </div>
         </div>
         
-        <div class="form-group">
-            <label for="port">Port:</label>
-            <input type="number" id="port" value="3306">
-        </div>
-        
-        <div class="form-group">
-            <label for="database">Database Name:</label>
-            <input type="text" id="database" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" id="username" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" id="password">
+        <!-- SQLite-specific section -->
+        <div id="sqlite-section" style="display: none;">
+            <div class="form-group">
+                <label for="dbFile">SQLite Database File:</label>
+                <input type="file" id="dbFile" name="dbFile" accept=".db,.sqlite,.sqlite3">
+                <p class="help-text">Upload your existing SQLite database file</p>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="createNewDb" name="createNewDb">
+                    Create a new empty database instead
+                </label>
+                <p class="help-text">If checked, a new SQLite database will be created</p>
+            </div>
         </div>
         
         <div class="form-group">
             <label>
-                <input type="checkbox" id="autoStart" checked>
+                <input type="checkbox" id="autoStart" name="autoStart" checked>
                 Automatically install and start API after generation
             </label>
         </div>
@@ -98,58 +123,170 @@ Api_Generator\public\index.html -->
     
     <script>
         document.getElementById('dbType').addEventListener('change', function() {
+            const dbType = this.value;
             const portField = document.getElementById('port');
-            portField.value = this.value === 'mysql' ? '3306' : '5432';
+            const sqliteSection = document.getElementById('sqlite-section');
+            const credentialsSection = document.getElementById('credentials-section');
+            
+            if (dbType === 'sqlite') {
+                sqliteSection.style.display = 'block';
+                credentialsSection.style.display = 'none';
+                
+                // Disable required validation on hidden fields
+                document.getElementById('database').required = false;
+                document.getElementById('username').required = false;
+            } else {
+                sqliteSection.style.display = 'none';
+                credentialsSection.style.display = 'block';
+                
+                // Re-enable required validation
+                document.getElementById('database').required = true;
+                document.getElementById('username').required = true;
+                
+                portField.value = dbType === 'mysql' ? '3306' : '5432';
+            }
         });
         
         document.getElementById('generator-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const config = {
-                projectName: document.getElementById('projectName').value,
-                host: document.getElementById('host').value,
-                port: document.getElementById('port').value,
-                database: document.getElementById('database').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
-            };
+            // Validate project name regardless of database type
+            const projectName = document.getElementById('projectName').value.trim();
+            if (!projectName) {
+                alert('Please enter a project name');
+                return;
+            }
             
-            const type = document.getElementById('dbType').value;
+            const dbType = document.getElementById('dbType').value;
             const autoStart = document.getElementById('autoStart').checked;
             
-            try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, config, autoStart })
-                });
+            if (dbType === 'sqlite') {
+                // Very simple approach - use URLSearchParams instead of FormData
+                const params = new URLSearchParams();
+                params.append('projectName', projectName);
+                params.append('type', dbType);
+                params.append('autoStart', autoStart.toString());
                 
-                const data = await response.json();
+                const createNewDb = document.getElementById('createNewDb').checked;
+                params.append('createNewDb', createNewDb.toString());
                 
-                if (data.success) {
-                    document.getElementById('output-path').textContent = data.outputPath;
-                    
-                    // Update the result area with API URL if running
-                    if (data.running && data.apiUrl) {
-                        document.getElementById('result').innerHTML += `
-                            <p>API is running at: <a href="${data.apiUrl}" target="_blank">${data.apiUrl}</a></p>
-                            <p>You can test the endpoints:</p>
-                            <ul>
-                                <li><a href="${data.apiUrl}/api/users" target="_blank">${data.apiUrl}/api/users</a> (GET all users)</li>
-                                <li>${data.apiUrl}/api/users/:id (GET a specific user)</li>
-                                <li>${data.apiUrl}/api/users (POST to create a new user)</li>
-                            </ul>
-                        `;
+                console.log("SQLite params:", Object.fromEntries(params));
+                
+                // Only require file if not creating a new DB
+                if (!createNewDb) {
+                    const dbFileInput = document.getElementById('dbFile');
+                    if (dbFileInput.files.length === 0) {
+                        alert('Please select a SQLite database file or check "Create new database"');
+                        return;
                     }
                     
-                    document.getElementById('result').style.display = 'block';
+                    // For file upload, we still need FormData
+                    const formData = new FormData();
+                    // Copy all params to formData
+                    for (const [key, value] of params.entries()) {
+                        formData.append(key, value);
+                    }
+                    formData.append('dbFile', dbFileInput.files[0]);
+                    
+                    try {
+                        console.log("Sending SQLite form data with file...");
+                        const response = await fetch('/api/generate', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`Server returned ${response.status}: ${errorText}`);
+                        }
+                        
+                        const data = await response.json();
+                        handleResponse(data);
+                    } catch (error) {
+                        console.error("Form submission error:", error);
+                        alert('Error: ' + error.message);
+                    }
                 } else {
-                    alert('Error: ' + data.error);
+                    // No file upload needed for new DB - use simple URLSearchParams
+                    try {
+                        console.log("Sending SQLite params (no file)...");
+                        const response = await fetch('/api/generate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: params
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`Server returned ${response.status}: ${errorText}`);
+                        }
+                        
+                        const data = await response.json();
+                        handleResponse(data);
+                    } catch (error) {
+                        console.error("Form submission error:", error);
+                        alert('Error: ' + error.message);
+                    }
                 }
-            } catch (error) {
-                alert('Error: ' + error.message);
+            } else {
+                // Handle MySQL/PostgreSQL with JSON (unchanged)
+                const config = {
+                    projectName: projectName,
+                    host: document.getElementById('host').value,
+                    port: document.getElementById('port').value,
+                    database: document.getElementById('database').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                };
+                
+                try {
+                    const response = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: dbType, config, autoStart })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Server returned ${response.status}: ${errorText}`);
+                    }
+                    
+                    const data = await response.json();
+                    handleResponse(data);
+                } catch (error) {
+                    console.error("Form submission error:", error);
+                    alert('Error: ' + error.message);
+                }
             }
         });
+        
+        function handleResponse(data) {
+            if (data.success) {
+                document.getElementById('output-path').textContent = data.outputPath;
+                
+                // Update the result area with API URL if running
+                if (data.running && data.apiUrl) {
+                    document.getElementById('result').innerHTML += `
+                        <p>API is running at: <a href="${data.apiUrl}" target="_blank">${data.apiUrl}</a></p>
+                        <p>You can test the endpoints:</p>
+                        <ul>
+                            <li><a href="${data.apiUrl}/api/users" target="_blank">${data.apiUrl}/api/users</a> (GET all users)</li>
+                            <li>${data.apiUrl}/api/users/:id (GET a specific user)</li>
+                            <li>${data.apiUrl}/api/users (POST to create a new user)</li>
+                        </ul>
+                    `;
+                }
+                
+                document.getElementById('result').style.display = 'block';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+        
+        // Initialize form based on default selection
+        document.getElementById('dbType').dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
