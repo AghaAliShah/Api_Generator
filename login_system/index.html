@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clubhouse Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome</h1>
+        <!-- Sign Up Form -->
+        <div id="signup-form">
+            <h2>Sign Up</h2>
+            <input type="email" id="signup-email" placeholder="Enter your email" required>
+            <input type="password" id="signup-password" placeholder="Enter your password" required>
+            <button onclick="signUp()">Sign Up</button>
+            <p>Already have an account? <a href="#" onclick="showSignIn()">Sign In</a></p>
+        </div>
+        <!-- Sign In Form -->
+        <div id="signin-form" style="display: none;">
+            <h2>Sign In</h2>
+            <input type="email" id="signin-email" placeholder="Enter your email" required>
+            <input type="password" id="signin-password" placeholder="Enter your password" required>
+            <button onclick="signIn()">Sign In</button>
+            <p>Need an account? <a href="#" onclick="showSignUp()">Sign Up</a></p>
+        </div>
+        <!-- Welcome Message (shown after login) -->
+        <div id="welcome" style="display: none;">
+            <h2>Welcome, <span id="user-email"></span>!</h2>
+            <button onclick="signOut()">Sign Out</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
